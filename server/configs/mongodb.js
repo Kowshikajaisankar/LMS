@@ -8,7 +8,7 @@ const connectDB = async () => {
     await mongoose.connect(`${process.env.MONGODB_URI}/lms`);
   } catch (error) {
     console.error("❌ Initial DB Connection Failed:", error.message);
-    process.exit(1); // Optional: Stop the app if DB connection fails
+    process.exit(1);
   }
 };
 
