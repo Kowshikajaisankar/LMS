@@ -3,21 +3,21 @@ import User from "../models/User.js";
 
 export const clerkWebhooks = async (req, res) => {
   console.log("✅ Clerk webhook route hit");
-  console.log("📦 Incoming headers:", req.headers);
-  console.log("📦 Incoming body:", JSON.stringify(req.body, null, 2));
 
   try {
-    // ✅ Disable SVIX verification temporarily for testing
-    // Uncomment the below when using real Clerk webhooks
-    /*
+    // ✅ Initialize SVIX webhook verification
     const whook = new Webhook(process.env.CLERK_WEBHOOK_SECRET);
-    whook.verify(JSON.stringify(req.body), {
-      "svix-id": req.headers["svix-id"],
-      "svix-timestamp": req.headers["svix-timestamp"],
-      "svix-signature": req.headers["svix-signature"],
-    });
+
+    // ✅ Verify Clerk signature headers
+    whook.verify(
+      JSON.stringify(req.body),
+      {
+        "svix-id": req.headers["svix-id"],
+        "svix-timestamp": req.headers["svix-timestamp"],
+        "svix-signature": req.headers["svix-signature"],
+      }
+    );
     console.log("🔐 SVIX webhook verified");
-    */
 
     const { data, type } = req.body;
     console.log("📬 Webhook event type:", type);
