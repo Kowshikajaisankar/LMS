@@ -7,7 +7,18 @@ import { clerkWebhooks } from './controllers/webhooks.js'
 
 const app= express()
 
-await connectDB()
+const startServer = async () => {
+  try {
+    await connectDB();
+    app.listen(PORT, () => {
+      console.log(`Server is running on port ${PORT}`);
+    });
+  } catch (err) {
+    console.error("❌ Error connecting to DB or starting server:", err);
+  }
+};
+
+startServer();
 
 app.use(cors())
 
