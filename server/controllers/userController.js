@@ -127,7 +127,7 @@ export const addUserRating = async (req, res)=>{
 
         const user = await User.findById(userId);
 
-        if(!user || user.enrolledCourses.includes(courseId)){
+        if(!user || !user.enrolledCourses.includes(courseId)){
             return res.json({success: false, message: 'user has not purchased this course.'});
 
         }
@@ -139,7 +139,7 @@ export const addUserRating = async (req, res)=>{
             course.courseRatings.push({userId, rating});
         }
         await course.save();
-        return res.json({success: true, message: error.message});
+        return res.json({success: true, message: 'Ratings added succesfully'});
     } catch (error) {
         res.json({success: false, message: error.message});
     }
