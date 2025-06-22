@@ -3,7 +3,9 @@ import Course from '../models/Course.js';
 import { v2 as cloudinary } from 'cloudinary';
 import { Purchase } from '../models/purchase.js';
 import User from '../models/User.js';
+import { nanoid } from 'nanoid'; // ✅ Add this
 
+// ✅ Update user role to educator
 export const updateRoleToEducator = async (req, res) => {
   try {
     const userId = req.auth().userId;
@@ -18,6 +20,7 @@ export const updateRoleToEducator = async (req, res) => {
   }
 };
 
+// ✅ Add a course with auto-generated lectureIds
 export const addCourse = async (req, res) => {
   try {
     console.log("🔥 Reached /add-course");
@@ -37,9 +40,20 @@ export const addCourse = async (req, res) => {
     const parsedCourseData = JSON.parse(courseDataRaw);
     parsedCourseData.educator = educatorId;
 
+    // ✅ Inject lectureId for each lecture if missing
+    parsedCourseData.courseContent = parsedCourseData.courseContent.map((chapter) => {
+      chapter.chapterContent = chapter.chapterContent.map((lecture) => ({
+        ...lecture,
+        lectureId: lecture.lectureId || nanoid()
+      }));
+      return chapter;
+    });
+
+    // ✅ Upload thumbnail
     const imageUpload = await cloudinary.uploader.upload(imageFile.path);
     parsedCourseData.courseThumbnail = imageUpload.secure_url;
 
+    // ✅ Create course
     const newCourse = await Course.create(parsedCourseData);
     await newCourse.save();
 
@@ -52,16 +66,18 @@ export const addCourse = async (req, res) => {
   }
 };
 
-export const getEducatorCourses = async (req, res)=>{
-    try{
-        const educator = req.auth().userId;
-        const courses = await Course.find({educator});
-        res.json({success: true, courses });
-    }catch (error){
-        res.json({ success: false,message: error.message});
-    }
-}
+// ✅ Get courses created by the educator
+export const getEducatorCourses = async (req, res) => {
+  try {
+    const educator = req.auth().userId;
+    const courses = await Course.find({ educator });
+    res.json({ success: true, courses });
+  } catch (error) {
+    res.json({ success: false, message: error.message });
+  }
+};
 
+// ✅ Educator dashboard with earnings and enrolled student data
 export const educatorDashboardData = async (req, res) => {
   try {
     const educator = req.auth().userId;
@@ -104,26 +120,28 @@ export const educatorDashboardData = async (req, res) => {
   }
 };
 
-
-export const getEnrolledStudentsData = async (req, res)=>{
+// ✅ Get enrolled student data for all courses by the educator
+export const getEnrolledStudentsData = async (req, res) => {
   try {
     const educator = req.auth().userId;
-    const courses = await Course.find({educator});
-    const courseIds =courses.map(course => course._id);
-    const purchases = await Purchase.find({
-      courseId: { $in: courseIds},
-      status: 'completed'
-    }).populate('userId', 'name imageUrl').populate('courseId', 'courseTitle')
+    const courses = await Course.find({ educator });
+    const courseIds = courses.map(course => course._id);
 
-    const enrolledStudents = purchases.map(purchase =>({
+    const purchases = await Purchase.find({
+      courseId: { $in: courseIds },
+      status: 'completed'
+    })
+      .populate('userId', 'name imageUrl')
+      .populate('courseId', 'courseTitle');
+
+    const enrolledStudents = purchases.map(purchase => ({
       student: purchase.userId,
       courseTitle: purchase.courseId.courseTitle,
       purchaseDate: purchase.createdAt
     }));
 
-    res.json({success: true, enrolledStudents});
-
+    res.json({ success: true, enrolledStudents });
   } catch (error) {
-    res.json({ success: false, message: error.message});
+    res.json({ success: false, message: error.message });
   }
-}
+};
