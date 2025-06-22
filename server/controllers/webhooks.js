@@ -58,7 +58,7 @@ export const clerkWebhooks = async (req, res) => {
 };
 
 export const stripeWebhooks = async (req, res) => {
-  const sig = req.headers['stripe-signature'];
+  const sig = req.headers["stripe-signature"];
   let event;
 
   try {
@@ -74,16 +74,24 @@ export const stripeWebhooks = async (req, res) => {
 
   console.log("⚡️ Stripe Webhook Event:", event.type);
 
-  if (event.type === 'checkout.session.completed') {
-    const session = event.data.object;
-    const { purchaseId } = session.metadata;
+  if (event.type === "payment_intent.succeeded") {
+    const paymentIntent = event.data.object;
 
     try {
+      // ✅ Get checkout session associated with payment intent
+      const sessionList = await stripeInstance.checkout.sessions.list({
+        payment_intent: paymentIntent.id,
+        limit: 1,
+      });
+
+      const session = sessionList.data[0];
+      const { purchaseId } = session.metadata;
+
       const purchaseData = await Purchase.findById(purchaseId);
       const userData = await User.findById(purchaseData.userId);
       const courseData = await Course.findById(purchaseData.courseId);
 
-      // Enroll user in course
+      // ✅ Enroll user
       if (!courseData.enrolledStudents.includes(userData._id)) {
         courseData.enrolledStudents.push(userData._id);
         await courseData.save();
@@ -94,29 +102,14 @@ export const stripeWebhooks = async (req, res) => {
         await userData.save();
       }
 
-      purchaseData.status = 'completed';
+      purchaseData.status = "completed";
       await purchaseData.save();
 
-      console.log("✅ Purchase marked as completed");
+      console.log("✅ Purchase marked as completed (via payment_intent.succeeded)");
       return res.status(200).json({ received: true });
 
     } catch (err) {
-      console.error("❌ Error during checkout.session.completed:", err.message);
-      return res.status(500).send('Server Error');
-    }
-  }
-
-  if (event.type === 'checkout.session.async_payment_failed') {
-    const session = event.data.object;
-    const { purchaseId } = session.metadata;
-
-    try {
-      const purchaseData = await Purchase.findById(purchaseId);
-      purchaseData.status = 'failed';
-      await purchaseData.save();
-      return res.status(200).json({ received: true });
-    } catch (err) {
-      console.error("❌ Failed to mark failed purchase:", err.message);
+      console.error("❌ Error handling payment_intent.succeeded:", err.message);
       return res.status(500).send("Server Error");
     }
   }
