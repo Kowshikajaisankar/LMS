@@ -8,7 +8,7 @@ const educatorRouter =express.Router()
 educatorRouter.get('/update-role', updateRoleToEducator)
 educatorRouter.post(
   '/add-course',
-  upload.single('image'), // or 'file' if that's what you're using in Postman
+  upload.single('image'), 
   protectEducator,
   addCourse
 );

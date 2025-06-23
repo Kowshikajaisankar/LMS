@@ -7,7 +7,7 @@ import { Purchase } from "../models/purchase.js";
 const stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 export const clerkWebhooks = async (req, res) => {
-  console.log("✅ Clerk Webhook route hit");
+  console.log("Clerk Webhook route hit");
 
   try {
     const payload = Buffer.from(req.body).toString("utf8");
@@ -22,7 +22,7 @@ export const clerkWebhooks = async (req, res) => {
     const evt = wh.verify(payload, headers);
     const { data, type } = evt;
 
-    console.log("📬 Clerk Webhook type:", type);
+    console.log("Clerk Webhook type:", type);
 
     if (type === "user.created") {
       const userData = {
@@ -52,7 +52,7 @@ export const clerkWebhooks = async (req, res) => {
 
     return res.status(200).json({ received: true });
   } catch (error) {
-    console.error("❌ Clerk Webhook error:", error.message);
+    console.error("Clerk Webhook error:", error.message);
     return res.status(400).json({ success: false, message: error.message });
   }
 };
@@ -68,17 +68,17 @@ export const stripeWebhooks = async (req, res) => {
       process.env.STRIPE_WEBHOOK_SECRET
     );
   } catch (err) {
-    console.error("❌ Stripe webhook signature error:", err.message);
+    console.error("Stripe webhook signature error:", err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
-  console.log("⚡️ Stripe Webhook Event:", event.type);
+  console.log("Stripe Webhook Event:", event.type);
 
   if (event.type === "payment_intent.succeeded") {
     const paymentIntent = event.data.object;
 
     try {
-      // ✅ Get checkout session associated with payment intent
+      // Get checkout session associated with payment intent
       const sessionList = await stripeInstance.checkout.sessions.list({
         payment_intent: paymentIntent.id,
         limit: 1,
@@ -91,7 +91,7 @@ export const stripeWebhooks = async (req, res) => {
       const userData = await User.findById(purchaseData.userId);
       const courseData = await Course.findById(purchaseData.courseId);
 
-      // ✅ Enroll user
+      //Enroll user
       if (!courseData.enrolledStudents.includes(userData._id)) {
         courseData.enrolledStudents.push(userData._id);
         await courseData.save();
@@ -105,11 +105,11 @@ export const stripeWebhooks = async (req, res) => {
       purchaseData.status = "completed";
       await purchaseData.save();
 
-      console.log("✅ Purchase marked as completed (via payment_intent.succeeded)");
+      console.log("Purchase marked as completed (via payment_intent.succeeded)");
       return res.status(200).json({ received: true });
 
     } catch (err) {
-      console.error("❌ Error handling payment_intent.succeeded:", err.message);
+      console.error("Error handling payment_intent.succeeded:", err.message);
       return res.status(500).send("Server Error");
     }
   }

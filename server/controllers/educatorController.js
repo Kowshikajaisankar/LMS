@@ -3,9 +3,9 @@ import Course from '../models/Course.js';
 import { v2 as cloudinary } from 'cloudinary';
 import { Purchase } from '../models/purchase.js';
 import User from '../models/User.js';
-import { nanoid } from 'nanoid'; // ✅ Add this
+import { nanoid } from 'nanoid'; 
 
-// ✅ Update user role to educator
+// Update user role to educator
 export const updateRoleToEducator = async (req, res) => {
   try {
     const userId = req.auth().userId;
@@ -20,10 +20,10 @@ export const updateRoleToEducator = async (req, res) => {
   }
 };
 
-// ✅ Add a course with auto-generated lectureIds
+// Add a course with auto-generated lectureIds
 export const addCourse = async (req, res) => {
   try {
-    console.log("🔥 Reached /add-course");
+    console.log("Reached /add-course");
 
     const educatorId = req.auth().userId;
     const imageFile = req.file;
@@ -40,7 +40,7 @@ export const addCourse = async (req, res) => {
     const parsedCourseData = JSON.parse(courseDataRaw);
     parsedCourseData.educator = educatorId;
 
-    // ✅ Inject lectureId for each lecture if missing
+    // Inject lectureId for each lecture if missing
     parsedCourseData.courseContent = parsedCourseData.courseContent.map((chapter) => {
       chapter.chapterContent = chapter.chapterContent.map((lecture) => ({
         ...lecture,
@@ -49,24 +49,24 @@ export const addCourse = async (req, res) => {
       return chapter;
     });
 
-    // ✅ Upload thumbnail
+    // Upload thumbnail
     const imageUpload = await cloudinary.uploader.upload(imageFile.path);
     parsedCourseData.courseThumbnail = imageUpload.secure_url;
 
-    // ✅ Create course
+    // Create course
     const newCourse = await Course.create(parsedCourseData);
     await newCourse.save();
 
-    console.log("✅ Course created:", newCourse._id);
+    console.log("Course created:", newCourse._id);
 
     res.json({ success: true, message: 'Course Added Successfully', courseId: newCourse._id });
   } catch (error) {
-    console.error("❌ Error in addCourse:", error.message);
+    console.error("Error in addCourse:", error.message);
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// ✅ Get courses created by the educator
+//Get courses created by the educator
 export const getEducatorCourses = async (req, res) => {
   try {
     const educator = req.auth().userId;
@@ -77,7 +77,7 @@ export const getEducatorCourses = async (req, res) => {
   }
 };
 
-// ✅ Educator dashboard with earnings and enrolled student data
+// Educator dashboard with earnings and enrolled student data
 export const educatorDashboardData = async (req, res) => {
   try {
     const educator = req.auth().userId;
@@ -120,7 +120,7 @@ export const educatorDashboardData = async (req, res) => {
   }
 };
 
-// ✅ Get enrolled student data for all courses by the educator
+// Get enrolled student data for all courses by the educator
 export const getEnrolledStudentsData = async (req, res) => {
   try {
     const educator = req.auth().userId;

@@ -11,47 +11,47 @@ import userRouter from './routes/userRoutes.js';
 
 const app = express();
 
-// 🧠 Connect DB and Cloudinary
+// Connect DB and Cloudinary
 await connectDB();
 await connectCloudinary();
 
-// ✅ CORS setup
+// CORS setup
 app.use(cors());
 
-// ✅ Stripe Webhook - must come before express.json()
+// Stripe Webhook - must come before express.json()
 app.post('/stripe', express.raw({ type: 'application/json' }), stripeWebhooks);
 
-// ✅ Clerk Webhook - also uses raw body
+// Clerk Webhook - also uses raw body
 app.post('/clerk', express.raw({ type: 'application/json' }), clerkWebhooks);
 
-// ✅ Clerk middleware (authentication)
+// Clerk middleware (authentication)
 app.use(clerkMiddleware());
 
-// ✅ Body parsers (after raw routes)
+// Body parsers (after raw routes)
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-// ✅ Health check
-app.get('/', (req, res) => res.send("API Working ✅"));
+// Health check
+app.get('/', (req, res) => res.send("API Working"));
 
-// ✅ Logger middleware
+// Logger middleware
 app.use((req, res, next) => {
-  console.log(`🔎 Incoming Request: ${req.method} ${req.originalUrl}`);
+  console.log(`Incoming Request: ${req.method} ${req.originalUrl}`);
   next();
 });
 
-// ✅ API routes
+// API routes
 app.use('/api/educator', educatorRouter);
 app.use('/api/course', courseRouter);
 app.use('/api/user', userRouter);
 
-// ❌ 404 handler (must be last)
+// 404 handler (must be last)
 app.use((req, res) => {
   res.status(404).json({ success: false, message: 'Not Found' });
 });
 
-// ✅ Server start
+// Server start
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`🚀 Server is running on port ${PORT}`);
+  console.log(`Server is running on port ${PORT}`);
 });
