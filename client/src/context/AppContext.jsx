@@ -7,7 +7,7 @@ import { toast } from 'react-toastify';
 
 export const AppContext = createContext();
 
-export const AppContextProvider = (props) => {
+export const AppContextProvider = ({ children }) => {
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
   const currency = import.meta.env.VITE_CURRENCY;
   const navigate = useNavigate();
@@ -19,8 +19,8 @@ export const AppContextProvider = (props) => {
   const [isEducator, setIsEducator] = useState(false);
   const [enrolledCourses, setEnrolledCourses] = useState([]);
   const [userData, setUserData] = useState(null);
+  const [loadingUserData, setLoadingUserData] = useState(true); // ✅ new
 
-  // ✅ Fetch All Courses
   const fetchAllCourses = async () => {
     try {
       const { data } = await axios.get(backendUrl + '/api/course/all');
@@ -34,8 +34,8 @@ export const AppContextProvider = (props) => {
     }
   };
 
-  // ✅ Fetch User Profile
   const fetchUserData = async () => {
+    setLoadingUserData(true); // ✅ start loading
     if (user?.publicMetadata?.role === 'educator') {
       setIsEducator(true);
     }
@@ -53,10 +53,11 @@ export const AppContextProvider = (props) => {
       }
     } catch (error) {
       toast.error(error.message);
+    } finally {
+      setLoadingUserData(false); // ✅ done loading
     }
   };
 
-  // ✅ Fetch Enrolled Courses
   const fetchUserEnrolledCourses = async () => {
     try {
       const token = await getToken();
@@ -74,24 +75,19 @@ export const AppContextProvider = (props) => {
     }
   };
 
-  // ✅ Combined loader: fetch user profile then enrollments
   useEffect(() => {
     const loadUserData = async () => {
       if (user) {
-        await fetchUserData(); // ensure userData is loaded first
-        await fetchUserEnrolledCourses(); // now safe to fetch enrollments
+        await fetchUserData();
+        await fetchUserEnrolledCourses();
+      } else {
+        setLoadingUserData(false); // if user not logged in
       }
     };
 
     loadUserData();
   }, [user]);
 
-  // ✅ Load all courses once
-  useEffect(() => {
-    fetchAllCourses();
-  }, []);
-
-  // ✅ Helpers
   const calculateRating = (course) => {
     if (!Array.isArray(course.courseRatings) || course.courseRatings.length === 0) {
       return 0;
@@ -128,7 +124,6 @@ export const AppContextProvider = (props) => {
     return totalLectures;
   };
 
-  // ✅ Context value
   const value = {
     currency,
     allCourses,
@@ -144,9 +139,10 @@ export const AppContextProvider = (props) => {
     backendUrl,
     userData,
     setUserData,
+    loadingUserData, // ✅ added
     getToken,
     fetchAllCourses,
   };
 
-  return <AppContext.Provider value={value}>{props.children}</AppContext.Provider>;
+  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };
