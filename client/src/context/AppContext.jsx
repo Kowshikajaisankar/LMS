@@ -13,17 +13,18 @@ export const AppContextProvider = ({ children }) => {
   const navigate = useNavigate();
 
   const { getToken } = useAuth();
-  const { user } = useUser();
+  const { user, isLoaded: isUserLoaded } = useUser(); // ✅ added isLoaded
 
   const [allCourses, setAllCourses] = useState([]);
   const [isEducator, setIsEducator] = useState(false);
   const [enrolledCourses, setEnrolledCourses] = useState([]);
   const [userData, setUserData] = useState(null);
-  const [loadingUserData, setLoadingUserData] = useState(true); // ✅ new
+  const [loadingUserData, setLoadingUserData] = useState(true);
 
+  // ✅ Fetch all available courses
   const fetchAllCourses = async () => {
     try {
-      const { data } = await axios.get(backendUrl + '/api/course/all');
+      const { data } = await axios.get(`${backendUrl}/api/course/all`);
       if (data.success) {
         setAllCourses(data.courses);
       } else {
@@ -34,16 +35,19 @@ export const AppContextProvider = ({ children }) => {
     }
   };
 
+  // ✅ Fetch user profile data
   const fetchUserData = async () => {
-    setLoadingUserData(true); // ✅ start loading
+    setLoadingUserData(true);
     if (user?.publicMetadata?.role === 'educator') {
       setIsEducator(true);
     }
 
     try {
       const token = await getToken();
-      const { data } = await axios.get(backendUrl + '/api/user/data', {
-        headers: { Authorization: `Bearer ${token}` }
+      console.log("🪪 Clerk Token (User Data):", token); // debug
+
+      const { data } = await axios.get(`${backendUrl}/api/user/data`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (data.success) {
@@ -54,15 +58,18 @@ export const AppContextProvider = ({ children }) => {
     } catch (error) {
       toast.error(error.message);
     } finally {
-      setLoadingUserData(false); // ✅ done loading
+      setLoadingUserData(false);
     }
   };
 
+  // ✅ Fetch enrolled courses
   const fetchUserEnrolledCourses = async () => {
     try {
       const token = await getToken();
-      const { data } = await axios.get(backendUrl + '/api/user/enrolled-courses', {
-        headers: { Authorization: `Bearer ${token}` }
+      console.log("🪪 Clerk Token (Enrollments):", token); // debug
+
+      const { data } = await axios.get(`${backendUrl}/api/user/enrolled-courses`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (data.success) {
@@ -75,27 +82,30 @@ export const AppContextProvider = ({ children }) => {
     }
   };
 
+  // ✅ Load user data only when Clerk is ready
   useEffect(() => {
     const loadUserData = async () => {
-      if (user) {
-        await fetchUserData();
-        await fetchUserEnrolledCourses();
-      } else {
-        setLoadingUserData(false); // if user not logged in
+      if (!isUserLoaded || !user) {
+        console.warn("⏳ Clerk user not ready yet");
+        setLoadingUserData(false);
+        return;
       }
+
+      await fetchUserData();
+      await fetchUserEnrolledCourses();
     };
 
     loadUserData();
-  }, [user]);
+  }, [user, isUserLoaded]);
 
+  // ✅ Utility: calculate rating
   const calculateRating = (course) => {
-    if (!Array.isArray(course.courseRatings) || course.courseRatings.length === 0) {
-      return 0;
-    }
+    if (!Array.isArray(course.courseRatings) || course.courseRatings.length === 0) return 0;
     let totalRating = course.courseRatings.reduce((sum, r) => sum + r.rating, 0);
     return Math.floor(totalRating / course.courseRatings.length);
   };
 
+  // ✅ Utility: calculate chapter time
   const calculatechapterTime = (chapter) => {
     let time = 0;
     chapter.chapterContent.forEach((lecture) => {
@@ -104,6 +114,7 @@ export const AppContextProvider = ({ children }) => {
     return humanizeDuration(time * 60 * 1000, { units: ["h", "m"] });
   };
 
+  // ✅ Utility: total course duration
   const calculateCourseDuration = (course) => {
     let time = 0;
     course.courseContent.forEach((chapter) =>
@@ -114,6 +125,7 @@ export const AppContextProvider = ({ children }) => {
     return humanizeDuration(time * 60 * 1000, { units: ["h", "m"] });
   };
 
+  // ✅ Utility: total number of lectures
   const calculateNoOfLectures = (course) => {
     let totalLectures = 0;
     course.courseContent.forEach((chapter) => {
@@ -139,7 +151,7 @@ export const AppContextProvider = ({ children }) => {
     backendUrl,
     userData,
     setUserData,
-    loadingUserData, // ✅ added
+    loadingUserData,
     getToken,
     fetchAllCourses,
   };
