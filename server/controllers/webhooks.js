@@ -4,12 +4,7 @@ import User from "../models/User.js";
 import Course from "../models/Course.js";
 import { Purchase } from "../models/purchase.js";
 
-// Stripe Instance
 const stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY);
-
-// ===========================
-// ✅ Clerk Webhook Handler
-// ===========================
 export const clerkWebhooks = async (req, res) => {
   console.log("✅ Clerk Webhook route hit");
 

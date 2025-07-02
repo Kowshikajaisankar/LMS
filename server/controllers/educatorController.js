@@ -1,14 +1,18 @@
-import { clerkClient } from '@clerk/express';
+import { getAuth, clerkClient } from '@clerk/express';
 import Course from '../models/Course.js';
 import { v2 as cloudinary } from 'cloudinary';
 import { Purchase } from '../models/purchase.js';
 import User from '../models/User.js';
-import { nanoid } from 'nanoid'; 
+import { nanoid } from 'nanoid';
 
-// Update user role to educator
+// ✅ 1. Update user role to educator
 export const updateRoleToEducator = async (req, res) => {
   try {
-    const userId = req.auth().userId;
+    const { userId } = getAuth(req);
+
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized: No userId found' });
+    }
 
     await clerkClient.users.updateUserMetadata(userId, {
       publicMetadata: { role: 'educator' }
@@ -20,14 +24,18 @@ export const updateRoleToEducator = async (req, res) => {
   }
 };
 
-// Add a course with auto-generated lectureIds
+// ✅ 2. Add a course with auto-generated lectureIds
 export const addCourse = async (req, res) => {
   try {
     console.log("Reached /add-course");
 
-    const educatorId = req.auth().userId;
+    const { userId: educatorId } = getAuth(req);
     const imageFile = req.file;
     const courseDataRaw = req.body.courseData;
+
+    if (!educatorId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized: No userId found' });
+    }
 
     if (!imageFile) {
       return res.status(400).json({ success: false, message: 'Thumbnail not uploaded' });
@@ -40,7 +48,7 @@ export const addCourse = async (req, res) => {
     const parsedCourseData = JSON.parse(courseDataRaw);
     parsedCourseData.educator = educatorId;
 
-    // Inject lectureId for each lecture if missing
+    // Add unique lectureId to each lecture
     parsedCourseData.courseContent = parsedCourseData.courseContent.map((chapter) => {
       chapter.chapterContent = chapter.chapterContent.map((lecture) => ({
         ...lecture,
@@ -53,12 +61,11 @@ export const addCourse = async (req, res) => {
     const imageUpload = await cloudinary.uploader.upload(imageFile.path);
     parsedCourseData.courseThumbnail = imageUpload.secure_url;
 
-    // Create course
+    // Save course
     const newCourse = await Course.create(parsedCourseData);
     await newCourse.save();
 
     console.log("Course created:", newCourse._id);
-
     res.json({ success: true, message: 'Course Added Successfully', courseId: newCourse._id });
   } catch (error) {
     console.error("Error in addCourse:", error.message);
@@ -66,10 +73,15 @@ export const addCourse = async (req, res) => {
   }
 };
 
-//Get courses created by the educator
+// ✅ 3. Get courses created by the educator
 export const getEducatorCourses = async (req, res) => {
   try {
-    const educator = req.auth().userId;
+    const { userId: educator } = getAuth(req);
+
+    if (!educator) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
     const courses = await Course.find({ educator });
     res.json({ success: true, courses });
   } catch (error) {
@@ -77,10 +89,14 @@ export const getEducatorCourses = async (req, res) => {
   }
 };
 
-// Educator dashboard with earnings and enrolled student data
+// ✅ 4. Dashboard with earnings and enrolled students
 export const educatorDashboardData = async (req, res) => {
   try {
-    const educator = req.auth().userId;
+    const { userId: educator } = getAuth(req);
+
+    if (!educator) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
 
     const courses = await Course.find({ educator });
     const totalCourses = courses.length;
@@ -94,6 +110,7 @@ export const educatorDashboardData = async (req, res) => {
     const totalEarnings = purchases.reduce((sum, purchase) => sum + purchase.amount, 0);
 
     const enrolledStudentsData = [];
+
     for (const course of courses) {
       const students = await User.find({
         _id: { $in: course.enrolledStudents }
@@ -120,10 +137,15 @@ export const educatorDashboardData = async (req, res) => {
   }
 };
 
-// Get enrolled student data for all courses by the educator
+// ✅ 5. Get enrolled student data for all educator’s courses
 export const getEnrolledStudentsData = async (req, res) => {
   try {
-    const educator = req.auth().userId;
+    const { userId: educator } = getAuth(req);
+
+    if (!educator) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
     const courses = await Course.find({ educator });
     const courseIds = courses.map(course => course._id);
 
