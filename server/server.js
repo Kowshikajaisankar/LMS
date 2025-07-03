@@ -8,50 +8,60 @@ import { clerkWebhooks, stripeWebhooks } from './controllers/webhooks.js';
 import educatorRouter from './routes/educatorRoutes.js';
 import courseRouter from './routes/courseRoutes.js';
 import userRouter from './routes/userRoutes.js';
+import multer from 'multer';
 
+// App setup
 const app = express();
+const PORT = process.env.PORT || 5000;
 
 // Connect DB and Cloudinary
 await connectDB();
 await connectCloudinary();
 
-// CORS setup
+// Multer setup for image uploads
+const storage = multer.diskStorage({
+  filename: (req, file, cb) => cb(null, `${Date.now()}-${file.originalname}`)
+});
+const upload = multer({ storage });
+
+// CORS
 app.use(cors());
 
-// Stripe Webhook - must come before express.json()
-app.post('/stripe', express.raw({ type: 'application/json' }), stripeWebhooks);
+// =====================
+// ✅ Webhook Routes FIRST (MUST USE raw parser)
+// =====================
+app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), stripeWebhooks);
+app.post('/api/webhooks/clerk', express.raw({ type: '*/*' }), clerkWebhooks);
 
-// Clerk Webhook - also uses raw body
-app.post('/clerk', express.raw({ type: 'application/json' }), clerkWebhooks);
+// =====================
+// ✅ Clerk Middleware (Authentication)
+// =====================
+app.use(clerkMiddleware); // ✅ FIXED
 
-// Clerk middleware (authentication)
-app.use(clerkMiddleware());
-
-// Body parsers (after raw routes)
+// =====================
+// ✅ Normal Middleware AFTER raw ones
+// =====================
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-// Health check
-app.get('/', (req, res) => res.send("API Working"));
+// =====================
+// ✅ Routes
+// =====================
+app.get('/', (req, res) => res.send("✅ API Working"));
 
-// Logger middleware
 app.use((req, res, next) => {
-  console.log(`Incoming Request: ${req.method} ${req.originalUrl}`);
+  console.log(`📥 Incoming Request: ${req.method} ${req.originalUrl}`);
   next();
 });
 
-// API routes
-app.use('/api/educator', educatorRouter);
+app.use('/api/educator', upload.single('image'), educatorRouter);
 app.use('/api/course', courseRouter);
 app.use('/api/user', userRouter);
 
-// 404 handler (must be last)
 app.use((req, res) => {
-  res.status(404).json({ success: false, message: 'Not Found' });
+  res.status(404).json({ success: false, message: '❌ Not Found' });
 });
 
-// Server start
-const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+  console.log(`🚀 Server is running on port ${PORT}`);
 });
